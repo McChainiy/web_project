@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+    <div class="row">
+        {% if session['username'] == username %}
+            <div class="col-md-2 col-md-offset-1">
+                <a href="/add_news" class="btn btn-primary">Добавить новость</a>
+            </div>
+        {% else %}
+            {% if not isfriend %}
+                <div class="col-md-2 col-md-offset-1">
+                    <a href="/add_friend/{{username}}" class="btn btn-primary">Добавить в друзья</a>
+                </div>
+            {% else %}
+                <div class="col-md-2 col-md-offset-1">
+                    <a href="/delete_friend/{{username}}" class="btn btn-danger">Удалить из друзей</a>
+                </div>
+            {% endif %}
+        {% endif %}
+        <div class="col-md-2 col-md-offset-3">
+            <a href="/sort_by_date" class="btn btn-secondary">По дате</a>
+        </div>
+        <div class="col-md-2 col-md-offset-4" >
+            <a href="/sort_by_alph" class="btn btn-secondary">По алфавиту</a>
+        </div>
+    </div>
+
+    <a></a>
+
+    {% for item in news %}
+        <div class="alert alert-dark" role="alert">
+            <h2>{{item[1]}}</h2>
+            <div>{{item[2]}}</div>
+            <a href="/delete_news/{{item[0]}}">Удалить новость</a>
+        </div>
+    {% endfor %}
+
+ {% endblock %}

@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+ 
+{% block content %}
+    <form method="post" enctype="multipart/form-data">
+        <select class="form-control" id="classSelect" name="class">
+            <option>Завтра</option>
+            <option>На 3 дня</option>
+            <option>На неделю</option>
+            <option>На месяц</option>
+        </select>
+        <p><input type="submit" value="Выбрать"></p>
+    </form>
+{% endblock %}

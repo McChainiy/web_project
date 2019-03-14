@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+ 
+{% block content %}
+    <form method="post" enctype="multipart/form-data">
+        <input type="text" class="form-control" id="num1" placeholder="Введите 1 число" name="num1">
+        <input type="text" class="form-control" id="num2" placeholder="Введите 2 число" name="num2">
+        <p><input type="submit" value="Выбрать"></p>
+    </form>
+{% endblock %}

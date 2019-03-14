@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-md-2 col-md-offset-3">
+            <a href="/sort_by_date" class="btn btn-secondary">По дате</a>
+        </div>
+        <div class="col-md-2 col-md-offset-4" >
+            <a href="/sort_by_alph" class="btn btn-secondary">По алфавиту</a>
+        </div>
+    </div>
+
+    {% for item in friends %}
+        <div class="alert alert-dark" role="alert">
+            <h2>{{item}}</h2>
+            <a href="#">Написать</a>
+            <a href="/delete_friend/{{item}}">Удалить</a>
+        </div>
+    {% endfor %}
+
+ {% endblock %}

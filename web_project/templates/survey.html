@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+ 
+{% block content %}
+    <h1>Авторизация</h1>
+    <form action="" method="post" novalidate>
+        {{ form.hidden_tag() }}
+        <p>
+            {{ form.username.label }}<br>
+            {{ form.username }}<br>
+            {% for error in form.username.errors %}
+                <div class="alert alert-danger" role="alert">
+                    {{ error }}
+                </div>
+            {% endfor %}
+        </p>
+        <p>
+            {{ form.age.label }}<br>
+            {{ form.age }}<br>
+            {% for error in form.age.errors %}
+                <div class="alert alert-danger" role="alert">
+                    {{ error }}
+                </div>
+            {% endfor %}
+        </p>
+        <p>
+            {{ form.select.label }}<br>
+            {{ form.select }}<br>
+            {% for error in form.select.errors %}
+                <div class="alert alert-danger" role="alert">
+                    {{ error }}
+                </div>
+            {% endfor %}
+        </p>
+        <p>
+            {{ form.gender.label }}<br>
+            {{ form.gender }}<br>
+            {% for error in form.gender.errors %}
+                <div class="alert alert-danger" role="alert">
+                    {{ error }}
+                </div>
+            {% endfor %}
+        </p>
+        <p>{{ form.dog() }} {{ form.dog.label }}</p>
+        <p>{{ form.cat() }} {{ form.cat.label }}</p>
+        <p>{{ form.sport() }} {{ form.sport.label }}</p>
+        <p>{{ form.lifer() }} {{ form.lifer.label }}</p>
+        <p>{{ form.kino() }} {{ form.kino.label }}</p>
+        <p>{{ form.submit() }}</p>
+    </form>
+{% endblock %}

@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+ 
+{% block content %}
+    <form method="post" enctype="multipart/form-data">
+        <input type="text" class="form-control" id="name" aria-describedby="emailHelp" placeholder="Введите имя" name="text">
+        <p><input type="submit" value="Выбрать"></p>
+    </form>
+{% endblock %}
