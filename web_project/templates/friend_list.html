@@ -13,7 +13,7 @@
     {% for item in friends %}
         <div class="alert alert-dark" role="alert">
             <h2>{{item}}</h2>
-            <a href="#">Написать</a>
+            <a href="/chat/{{item}}">Написать</a>
             <a href="/delete_friend/{{item}}">Удалить</a>
         </div>
     {% endfor %}

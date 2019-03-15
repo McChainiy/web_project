@@ -6,19 +6,19 @@
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
     <title>{{title}}</title>
 </head>
-  <body>
-    <header>
-      {% if "username" in session.keys() %}
-        <a class="navbar-brand" href="/logout">Выйти</a>
-        <a class="navbar-brand" href="/friends">Друзья</a>
-      {% else %}
-        <a class="navbar-brand" href="#">Наше приложение</a>
-      {% endif %}
+<body>
+  <header>
+    {% if "username" in session.keys() %}
+      <a class="navbar-brand" href="/logout">Выйти</a>
+      <a class="navbar-brand" href="/friends">Друзья</a>
+    {% else %}
+      <a class="navbar-brand" href="#">{{session}}</a>
+    {% endif %}
 
-    </header>
-    <!-- Begin page content -->
-    <main role="main" class="container">
-        {% block content %}{% endblock %}
-    </main>
-  </body>
+  </header>
+  <!-- Begin page content -->
+  <main role="main" class="container">
+      {% block content %}{% endblock %}
+  </main>
+</body>
 </html>

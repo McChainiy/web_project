@@ -3,6 +3,7 @@ import os
 import json, datetime
 from news_form import AddNewsForm
 from loginform import LoginForm
+from chat_form import ChatForm
 
 import sqlite3
 
@@ -42,7 +43,7 @@ class UsersModel:
         cursor = self.connection.cursor()
         cursor.execute('''INSERT INTO users 
                           (user_name, password_hash, friend_list) 
-                          VALUES (?,?,?)''', (user_name, password_hash, bytes([1, 2, 3])))
+                          VALUES (?,?,?)''', (user_name, password_hash, bytes([])))
         cursor.close()
         self.connection.commit()
 
@@ -150,6 +151,47 @@ class NewsModel:
         self.connection.commit()
 
 
+class MessageModel:
+    def __init__(self, connection):
+        self.connection = connection
+
+    def init_table(self):
+        cursor = self.connection.cursor()
+        cursor.execute('''CREATE TABLE IF NOT EXISTS messages 
+                                (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                 content VARCHAR(1000),
+                                 user_id INTEGER,
+                                 friend_id INTEGER,
+                                 time VARCHAR(100)
+                                 )''')
+        cursor.close()
+        self.connection.commit()
+
+    def insert(self, content, user_id, friend_id):
+        cursor = self.connection.cursor()
+        cursor.execute('''INSERT INTO messages 
+                            (content, user_id, friend_id, time) 
+                              VALUES (?,?,?,?)''', (content, str(user_id), str(friend_id), 'time'))
+        cursor.close()
+        self.connection.commit()
+
+    def get(self, user_id, friend_id):
+        cursor = self.connection.cursor()
+        cursor.execute("SELECT * FROM messages WHERE user_id = ? AND friend_id = ?",
+                       [str(user_id), str(friend_id)])
+        sended = cursor.fetchall()
+        cursor.execute("SELECT * FROM messages WHERE user_id = ? AND friend_id = ?",
+                       [str(friend_id), str(user_id)])
+        gotten = cursor.fetchall()
+        return [sended, gotten]
+
+    def delete(self, id):
+        cursor = self.connection.cursor()
+        cursor.execute('''DELETE FROM messages WHERE id = ?''', [str(id)])
+        cursor.close()
+        self.connection.commit()
+
+
 db = DB()
 session = {}
 user_model = UsersModel(db.get_connection())
@@ -159,20 +201,26 @@ if not user_model.check_username('danil'):
 news_model = NewsModel(db.get_connection())
 news_model.init_table()
 sort_method = 'date'
+message_model = MessageModel(db.get_connection())
+message_model.init_table()
 print(user_model.get(1))
 #user_model.add_friend(1, 4)
+message_model.insert('Привет', 1, 3)
+print(message_model.get(1, 3))
 print((user_model.get(1)))
 print(news_model.get_all(1))
 
 
-@app.route('/<username>')
+@app.route('/user/<username>')
 def index(username):
     global sort_method
     if request.method == 'GET':
         if 'username' not in session:
             return redirect('/login')
+        if username == 'favicon.ico':
+            return
         host = user_model.get_by_name(username)
-        print(username)
+        print(username, 'name')
         if host:
 
             user_id = host[0]
@@ -185,6 +233,7 @@ def index(username):
             news.sort(key=lambda x: x[1])
         else:
             news.sort(key=lambda x: x[0])
+        print(session)
         return render_template('index_news.html', username=username,
                                news=news, session=session, isfriend=isfriend)
 
@@ -198,7 +247,7 @@ def admin():
         if 'username' not in session:
             return redirect('/login')
         if session['username'] != 'admin':
-            return redirect('/index')
+            return redirect('/user/admin')
         content = {}
         for i in users:
             content[i[1]] = len(news_model.get_all(i[0]))
@@ -210,14 +259,15 @@ def admin():
 def sort_by_date():
     global sort_method
     sort_method = 'date'
-    return redirect('/{}'.format(session['username']))
+    return redirect('/user/{}'.format(session['username']))
 
 
 @app.route('/sort_by_alph')
 def sort_by_alph():
     global sort_method
     sort_method = 'alph'
-    return redirect('/{}'.format(session['username']))
+    print(session['username'], 'alph')
+    return redirect('/user/{}'.format(session['username']))
 
 
 @app.route('/add_news', methods=['GET', 'POST'])
@@ -229,7 +279,8 @@ def add_news():
         title = form.title.data
         content = form.content.data
         news_model.insert(title, content, session['user_id'])
-        return redirect('/{}'.format(session['username']))
+        print(session['username'], 'add_news')
+        return redirect('/user/{}'.format(session['username']))
     return render_template('add_news.html', title='Добавление новости',
                            form=form, username=session['username'], session=session)
 
@@ -246,9 +297,25 @@ def login():
         if (exists[0]):
             session['username'] = user_name
             session['user_id'] = exists[1]
-        return redirect('/{}'.format(user_name))
+        print(user_name, 'login')
+        return redirect('/user/{}'.format(user_name))
 
     return render_template('login.html', title='Авторизация', form=form)
+
+
+@app.route('/chat/<friend_name>', methods=['GET', 'POST'])
+def chat(friend_name):
+    if 'username' not in session:
+        return redirect('/login')
+    friend_id = user_model.get_by_name(friend_name)[0]
+    chat = message_model.get(session['user_id'], friend_id)
+    chat = chat[0] + chat[1]
+    if request.method == 'POST':
+        message_model.insert(request.form['text'], session['user_id'], friend_id)
+        print(session, chat, 'post')
+    elif request.method == 'GET':
+        print(session, chat)
+        return render_template('chat.html', title='Диалог', session=session, chat=chat)
 
 
 @app.route('/logout')
@@ -261,7 +328,7 @@ def logout():
 @app.route('/delete_news/<int:number>/', methods=['GET', 'POST'])
 def delete_news(number):
     news_model.delete(number)
-    return redirect('/{}'.format(session['username']))
+    return redirect('/user/{}'.format(session['username']))
 
 
 @app.route('/delete_friend/<name>/', methods=['GET', 'POST'])
@@ -270,7 +337,7 @@ def delete_friend(name):
         return redirect('/login')
 
     user_model.delete_friend(session['user_id'], name)
-    return redirect('/{}'.format(name))
+    return redirect('/user/{}'.format(name))
 
 
 @app.route('/add_friend/<name>/', methods=['GET', 'POST'])
@@ -279,7 +346,13 @@ def add_friend(name):
         return redirect('/login')
     friend_id = user_model.get_by_name(name)[0]
     user_model.add_friend(session['user_id'], friend_id)
-    return redirect('/{}'.format(name))
+    print(session['username'], 'add_Friend')
+    return redirect('/user/{}'.format(name))
+
+
+@app.route('/')
+def log_index():
+    return redirect('/login')
 
 
 @app.route('/registration', methods=['GET', 'POST'])
@@ -294,7 +367,8 @@ def registration():
         if (exists[0]):
             session['username'] = user_name
             session['user_id'] = exists[1]
-            return redirect('/{}'.format(user_name))
+            print(session['username'], 'registration')
+            return redirect('/user/{}'.format(user_name))
         form.alert = 'Такой логин уже занят'
     return render_template('login.html', title='Регистрация', form=form)
 
