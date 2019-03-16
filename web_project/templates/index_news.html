@@ -32,7 +32,9 @@
         <div class="alert alert-dark" role="alert">
             <h2>{{item[1]}}</h2>
             <div>{{item[2]}}</div>
-            <a href="/delete_news/{{item[0]}}">Удалить новость</a>
+            {% if session['username'] == username %}
+                <a href="/delete_news/{{item[0]}}">Удалить новость</a>
+            {% endif %}
         </div>
     {% endfor %}
 

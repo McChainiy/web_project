@@ -10,9 +10,10 @@
   <header>
     {% if "username" in session.keys() %}
       <a class="navbar-brand" href="/logout">Выйти</a>
+      <a class="navbar-brand" href="/user/{{session['username']}}">{{session['username']}}</a>
       <a class="navbar-brand" href="/friends">Друзья</a>
     {% else %}
-      <a class="navbar-brand" href="#">{{session}}</a>
+      <a class="navbar-brand" href="#">Приложение</a>
     {% endif %}
 
   </header>

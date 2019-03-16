@@ -4,6 +4,7 @@ import json, datetime
 from news_form import AddNewsForm
 from loginform import LoginForm
 from chat_form import ChatForm
+import time
 
 import sqlite3
 
@@ -91,6 +92,10 @@ class UsersModel:
             return (True, row[0])
 
     def add_friend(self, user_id, friend_id):
+        self.adding_friend(user_id, friend_id)
+        self.adding_friend(friend_id, user_id)
+
+    def adding_friend(self, user_id, friend_id):
         massive = list(self.get(user_id)[3])
         massive.append(friend_id)
         cursor = self.connection.cursor()
@@ -99,6 +104,10 @@ class UsersModel:
 
     def delete_friend(self, user_id, friend_name):
         friend_id = self.get_by_name(friend_name)[0]
+        self.deleting_friend(friend_id, user_id)
+        self.deleting_friend(user_id, friend_id)
+
+    def deleting_friend(self, user_id, friend_id):
         massive = list(self.get(user_id)[3])
         del massive[massive.index(friend_id)]
         cursor = self.connection.cursor()
@@ -162,16 +171,17 @@ class MessageModel:
                                  content VARCHAR(1000),
                                  user_id INTEGER,
                                  friend_id INTEGER,
-                                 time VARCHAR(100)
-                                 )''')
+                                 time REAL)''')
         cursor.close()
         self.connection.commit()
 
     def insert(self, content, user_id, friend_id):
         cursor = self.connection.cursor()
+        t1 = time.time()
+        print(t1)
         cursor.execute('''INSERT INTO messages 
                             (content, user_id, friend_id, time) 
-                              VALUES (?,?,?,?)''', (content, str(user_id), str(friend_id), 'time'))
+                              VALUES (?,?,?,?)''', (content, str(user_id), str(friend_id), t1))
         cursor.close()
         self.connection.commit()
 
@@ -187,7 +197,9 @@ class MessageModel:
 
     def delete(self, id):
         cursor = self.connection.cursor()
-        cursor.execute('''DELETE FROM messages WHERE id = ?''', [str(id)])
+        if id == 'all':
+            cursor.execute('''DELETE FROM messages''')
+            cursor.execute('''DELETE FROM messages WHERE id = ?''', [str(id)])
         cursor.close()
         self.connection.commit()
 
@@ -205,7 +217,7 @@ message_model = MessageModel(db.get_connection())
 message_model.init_table()
 print(user_model.get(1))
 #user_model.add_friend(1, 4)
-message_model.insert('Привет', 1, 3)
+#message_model.delete('all')
 print(message_model.get(1, 3))
 print((user_model.get(1)))
 print(news_model.get_all(1))
@@ -308,14 +320,42 @@ def chat(friend_name):
     if 'username' not in session:
         return redirect('/login')
     friend_id = user_model.get_by_name(friend_name)[0]
-    chat = message_model.get(session['user_id'], friend_id)
-    chat = chat[0] + chat[1]
     if request.method == 'POST':
         message_model.insert(request.form['text'], session['user_id'], friend_id)
-        print(session, chat, 'post')
+        chat = get_chat(friend_id)
+        return render_template('chat.html', title='Диалог', session=session, chat=chat,
+                               friend_name=friend_name)
     elif request.method == 'GET':
-        print(session, chat)
-        return render_template('chat.html', title='Диалог', session=session, chat=chat)
+        chat = get_chat(friend_id)
+        return render_template('chat.html', title='Диалог', session=session, chat=chat,
+                               friend_name=friend_name)
+
+
+def get_chat(friend_id):
+    date = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', "Июль",
+            "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"]
+    chat = message_model.get(session['user_id'], friend_id)
+    chat = chat[0] + chat[1]
+    chat.sort(key=lambda x: x[4])
+    for i in range(len(chat)):
+        chat[i] = list(chat[i])
+        t1 = time.gmtime(chat[i][4])
+        cur_time = time.gmtime(time.time())
+        razn = t1[2] - cur_time[2]
+        if t1[0] == cur_time[0] and t1[1] == cur_time[1]:
+            if razn == 0:
+                day = 'сегодня'
+            elif razn == 1:
+                day = 'вчера'
+            elif razn == 2:
+                day = 'позавчера'
+            else:
+                day = '{} {}'.format(t1[2], date[t1[1] - 1])
+        else:
+            day = '{} {}'.format(t1[2], date[t1[1] - 1])
+        chat[i][4] = day
+    chat = chat[::-1]
+    return chat
 
 
 @app.route('/logout')
