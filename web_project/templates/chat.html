@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <style>
+        .layer1 {
+        position: fixed;
+        bottom: 15px;
+        right: 700px;
+        }
+        .layer2 {
+        position: fixed;
+        bottom: 32px;
+        right: 600px;
+        }
+        .layer3 {
+        position: relative;
+        top: 10px ;
+        left: 1100px ;
+        }
+    </style>
+    {% for item in chat %}
+        {% if item[2] == session['user_id'] %}
+            <div class="alert alert-primary" role="alert">
+                <h2>{{item[1]}}</h2>
+                <a>{{item[4]}}</a>
+                <div class="layer3">{{session['username']}}</div>
+            </div>
+        {% else %}
+            <div class="alert alert-dark" role="alert">
+                <h2>{{item[1]}}</h2>
+                <a>{{item[4]}}</a>
+                <div class="layer3">{{friend_name}}</div>
+            </div>
+        {% endif %}
+    {% endfor %}
+    <form method="post">
+        <div class="layer1">
+            <textarea name="text" cols="70" placeholder="Введите сообщение..."></textarea>
+        </div>
+        <div class="layer2">
+            <a><input type="submit" value="Отправить"></a>
+        </div>
+    </form>
+ {% endblock %}

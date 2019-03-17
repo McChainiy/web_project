@@ -125,7 +125,8 @@ class NewsModel:
                                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
                                  title VARCHAR(100),
                                  content VARCHAR(1000),
-                                 user_id INTEGER
+                                 user_id INTEGER,
+                                 likes VARCHAR(400)
                                  )''')
         cursor.close()
         self.connection.commit()
@@ -133,15 +134,30 @@ class NewsModel:
     def insert(self, title, content, user_id):
         cursor = self.connection.cursor()
         cursor.execute('''INSERT INTO news 
-                            (title, content, user_id) 
-                              VALUES (?,?,?)''', (title, content, str(user_id)))
+                            (title, content, user_id, likes) 
+                              VALUES (?,?,?,?)''', (title, content, str(user_id), ''))
         cursor.close()
+        self.connection.commit()
+
+    def got_liked(self, user_id, news_id):
+        massive = list(self.get(news_id)[4])
+        massive.append(user_id)
+        cursor = self.connection.cursor()
+        cursor.execute("UPDATE news SET likes = ? WHERE id = ?", (bytes(massive), news_id))
+        self.connection.commit()
+
+    def got_unliked(self, user_id, news_id):
+        massive = list(self.get(news_id)[4])
+        del massive[massive.index(user_id)]
+        cursor = self.connection.cursor()
+        cursor.execute("UPDATE news SET likes = ? WHERE id = ?", (bytes(massive), news_id))
         self.connection.commit()
 
     def get(self, news_id):
         cursor = self.connection.cursor()
         cursor.execute("SELECT * FROM news WHERE id = ?", [str(news_id)])
-        row = cursor.fetchone()
+        row = list(cursor.fetchone())
+        row[4] = list(row[4])
         return row
 
     def get_all(self, user_id=None):
@@ -151,6 +167,9 @@ class NewsModel:
         else:
             cursor.execute("SELECT * FROM news")
         rows = cursor.fetchall()
+        for i in range(len(rows)):
+            rows[i] = list(rows[i])
+            rows[i][4] = list(rows[i][4])
         return rows
 
     def delete(self, news_id):
@@ -195,6 +214,18 @@ class MessageModel:
         gotten = cursor.fetchall()
         return [sended, gotten]
 
+    def get_last(self, user_id, friend_id):
+        gotten = self.get(user_id, friend_id)
+        gotten = gotten[0] + gotten[1]
+        last = sorted(gotten, key=lambda x: x[4])[::-1]
+        if last != []:
+            mes = last[0][1]
+            if len(mes) > 70:
+                mes = ''.join(list(mes)[:70])
+                mes = '{} .....'.format(mes)
+            return [mes, user_model.get(last[0][2])[1]]
+        return ['', '']
+
     def delete(self, id):
         cursor = self.connection.cursor()
         if id == 'all':
@@ -215,12 +246,6 @@ news_model.init_table()
 sort_method = 'date'
 message_model = MessageModel(db.get_connection())
 message_model.init_table()
-print(user_model.get(1))
-#user_model.add_friend(1, 4)
-#message_model.delete('all')
-print(message_model.get(1, 3))
-print((user_model.get(1)))
-print(news_model.get_all(1))
 
 
 @app.route('/user/<username>')
@@ -232,20 +257,16 @@ def index(username):
         if username == 'favicon.ico':
             return
         host = user_model.get_by_name(username)
-        print(username, 'name')
         if host:
-
             user_id = host[0]
         else:
             print(host)
         isfriend = user_id in list(user_model.get(session['user_id'])[3])
-        print(isfriend)
         news = news_model.get_all(user_id)
         if sort_method == 'alph':
             news.sort(key=lambda x: x[1])
         else:
             news.sort(key=lambda x: x[0])
-        print(session)
         return render_template('index_news.html', username=username,
                                news=news, session=session, isfriend=isfriend)
 
@@ -255,7 +276,6 @@ def admin():
     global sort_method
     if request.method == 'GET':
         users = user_model.get('all')
-        print(users)
         if 'username' not in session:
             return redirect('/login')
         if session['username'] != 'admin':
@@ -267,19 +287,18 @@ def admin():
         return render_template('admin_page.html', content=content, session=session)
 
 
-@app.route('/sort_by_date')
-def sort_by_date():
+@app.route('/sort_by_date/<username>')
+def sort_by_date(username):
     global sort_method
     sort_method = 'date'
-    return redirect('/user/{}'.format(session['username']))
+    return redirect('/user/{}'.format(username))
 
 
-@app.route('/sort_by_alph')
-def sort_by_alph():
+@app.route('/sort_by_alph/<username>')
+def sort_by_alph(username):
     global sort_method
     sort_method = 'alph'
-    print(session['username'], 'alph')
-    return redirect('/user/{}'.format(session['username']))
+    return redirect('/user/{}'.format(username))
 
 
 @app.route('/add_news', methods=['GET', 'POST'])
@@ -292,7 +311,6 @@ def add_news():
         content = form.content.data
         news_model.insert(title, content, session['user_id'])
         print(session['username'], 'add_news')
-        return redirect('/user/{}'.format(session['username']))
     return render_template('add_news.html', title='Добавление новости',
                            form=form, username=session['username'], session=session)
 
@@ -309,7 +327,6 @@ def login():
         if (exists[0]):
             session['username'] = user_name
             session['user_id'] = exists[1]
-        print(user_name, 'login')
         return redirect('/user/{}'.format(user_name))
 
     return render_template('login.html', title='Авторизация', form=form)
@@ -345,9 +362,9 @@ def get_chat(friend_id):
         if t1[0] == cur_time[0] and t1[1] == cur_time[1]:
             if razn == 0:
                 day = 'сегодня'
-            elif razn == 1:
+            elif razn == -1:
                 day = 'вчера'
-            elif razn == 2:
+            elif razn == -2:
                 day = 'позавчера'
             else:
                 day = '{} {}'.format(t1[2], date[t1[1] - 1])
@@ -371,6 +388,24 @@ def delete_news(number):
     return redirect('/user/{}'.format(session['username']))
 
 
+@app.route('/like_news/<int:number>/', methods=['GET', 'POST'])
+def like_news(number):
+    news_model.got_liked(session['user_id'], number)
+    user = news_model.get(number)
+    user = user[3]
+    user = user_model.get(user)[1]
+    return redirect('/user/{}'.format(user))
+
+
+@app.route('/unlike_news/<int:number>/', methods=['GET', 'POST'])
+def unlike_news(number):
+    news_model.got_unliked(session['user_id'], number)
+    user = news_model.get(number)
+    user = user[3]
+    user = user_model.get(user)[1]
+    return redirect('/user/{}'.format(user))
+
+
 @app.route('/delete_friend/<name>/', methods=['GET', 'POST'])
 def delete_friend(name):
     if 'username' not in session:
@@ -386,7 +421,6 @@ def add_friend(name):
         return redirect('/login')
     friend_id = user_model.get_by_name(name)[0]
     user_model.add_friend(session['user_id'], friend_id)
-    print(session['username'], 'add_Friend')
     return redirect('/user/{}'.format(name))
 
 
@@ -407,7 +441,6 @@ def registration():
         if (exists[0]):
             session['username'] = user_name
             session['user_id'] = exists[1]
-            print(session['username'], 'registration')
             return redirect('/user/{}'.format(user_name))
         form.alert = 'Такой логин уже занят'
     return render_template('login.html', title='Регистрация', form=form)
@@ -424,8 +457,20 @@ def friend_list():
             new_friends.append(user_model.get(i)[1])
         except Exception:
             pass
-    print(friends, new_friends)
     return render_template('friend_list.html', username=session['username'],
+            friends=new_friends, session=session)
+
+
+@app.route('/chats')
+def chats():
+    if 'username' not in session:
+        return redirect('/login')
+    new_friends = {}
+    friends = list(user_model.get(session['user_id'])[3])
+    for i in friends:
+        fr = user_model.get(i)[1]
+        new_friends[fr] = message_model.get_last(session['user_id'], i)
+    return render_template('chat_list.html', username=session['username'],
             friends=new_friends, session=session)
 
 

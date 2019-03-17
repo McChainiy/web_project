@@ -3,8 +3,7 @@
 {% block content %}
     {% for item in friends %}
         <div class="alert alert-dark" role="alert">
-            <h2>{{item}}</h2>
-            <a href="/user/{{item}}">Профиль</a>
+            <a class="alert-link" href="/user/{{item}}" ><h2>{{item}}</h2></a>
             <a href="/chat/{{item}}">Написать</a>
             <a href="/delete_friend/{{item}}">Удалить</a>
         </div>

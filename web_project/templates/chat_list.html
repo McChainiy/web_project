@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block content %}
+    {% for item in friends %}
+        {% if friends[item][1] == session['username'] %}
+            <div class="alert alert-primary" role="alert">
+                <a class="alert-link" href="/chat/{{item}}" ><h2>{{item}}</h2></a>
+                {% if friends[item] != ['', ''] %}
+                    <h6>{{friends[item][1]}}: {{friends[item][0]}}</h6>
+                {% endif %}
+            </div>
+        {% else %}
+            <div class="alert alert-dark" role="alert">
+                <a class="alert-link" href="/chat/{{item}}" ><h2>{{item}}</h2></a>
+                {% if friends[item] != ['', ''] %}
+                    <h6>{{friends[item][1]}}: {{friends[item][0]}}</h6>
+                {% endif %}
+            </div>
+        {% endif %}
+    {% endfor %}
+
+ {% endblock %}

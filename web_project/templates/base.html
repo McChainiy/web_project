@@ -12,8 +12,10 @@
       <a class="navbar-brand" href="/logout">Выйти</a>
       <a class="navbar-brand" href="/user/{{session['username']}}">{{session['username']}}</a>
       <a class="navbar-brand" href="/friends">Друзья</a>
+      <a class="navbar-brand" href="/chats">Диалоги</a>
     {% else %}
-      <a class="navbar-brand" href="#">Приложение</a>
+      <a class="navbar-brand" href="/registration">Регистрация</a>
+      <a class="navbar-brand" href="/login">Войти</a>
     {% endif %}
 
   </header>

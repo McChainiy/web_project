@@ -1,7 +1,6 @@
 {% extends "base.html" %}
 
 {% block content %}
-
     <div class="row">
         {% if session['username'] == username %}
             <div class="col-md-2 col-md-offset-1">
@@ -19,22 +18,34 @@
             {% endif %}
         {% endif %}
         <div class="col-md-2 col-md-offset-3">
-            <a href="/sort_by_date" class="btn btn-secondary">По дате</a>
+            <a href="/sort_by_date/{{username}}" class="btn btn-secondary">По дате</a>
         </div>
         <div class="col-md-2 col-md-offset-4" >
-            <a href="/sort_by_alph" class="btn btn-secondary">По алфавиту</a>
+            <a href="/sort_by_alph/{{username}}" class="btn btn-secondary">По алфавиту</a>
         </div>
     </div>
-
-    <a></a>
-
+    <style>
+        .layer3 {
+        position: relative;
+        top: 40px ;
+        left: 950px ;
+        }
+    </style>
     {% for item in news %}
         <div class="alert alert-dark" role="alert">
             <h2>{{item[1]}}</h2>
             <div>{{item[2]}}</div>
             {% if session['username'] == username %}
-                <a href="/delete_news/{{item[0]}}">Удалить новость</a>
+                <div class="layer3">
+                    <a href="/delete_news/{{item[0]}}" >Удалить новость </a>
+                </div>
             {% endif %}
+            {% if session['user_id'] in item[4] %}
+                <a href="/unlike_news/{{item[0]}}" class="btn btn-danger">{{item[4]|length}}❤</a>
+            {% else %}
+                <a href="/like_news/{{item[0]}}" class="btn btn-primary">{{item[4]|length}}♡ </a>
+            {% endif %}
+
         </div>
     {% endfor %}
 
