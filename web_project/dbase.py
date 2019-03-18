@@ -190,7 +190,9 @@ class MessageModel:
                                  content VARCHAR(1000),
                                  user_id INTEGER,
                                  friend_id INTEGER,
-                                 time REAL)''')
+                                 time REAL,
+                                 seen BLOB
+                                 )''')
         cursor.close()
         self.connection.commit()
 
@@ -199,12 +201,24 @@ class MessageModel:
         t1 = time.time()
         print(t1)
         cursor.execute('''INSERT INTO messages 
-                            (content, user_id, friend_id, time) 
-                              VALUES (?,?,?,?)''', (content, str(user_id), str(friend_id), t1))
+                            (content, user_id, friend_id, time, seen) 
+                              VALUES (?,?,?,?,?)''', (content, str(user_id), str(friend_id), t1, False))
         cursor.close()
         self.connection.commit()
 
-    def get(self, user_id, friend_id):
+    def check_mes_count(self, user_id):
+        cursor = self.connection.cursor()
+        cursor.execute("SELECT * FROM messages WHERE friend_id = ?", [str(user_id)])
+        gotten = cursor.fetchall()
+        cnt = []
+        for i in gotten:
+            if i[5] == 0 and i[2] not in cnt:
+                cnt.append(i[2])
+        for i in range(len(cnt)):
+            cnt[i] = user_model.get(cnt[i])[1]
+        return cnt
+
+    def get(self, user_id, friend_id, check_old=False):
         cursor = self.connection.cursor()
         cursor.execute("SELECT * FROM messages WHERE user_id = ? AND friend_id = ?",
                        [str(user_id), str(friend_id)])
@@ -212,7 +226,24 @@ class MessageModel:
         cursor.execute("SELECT * FROM messages WHERE user_id = ? AND friend_id = ?",
                        [str(friend_id), str(user_id)])
         gotten = cursor.fetchall()
+        if not check_old:
+            return [sended, gotten]
+        print(gotten)
+        for i in gotten:
+            if not i[5]:
+                self.match_as_seen(i[0])
         return [sended, gotten]
+
+    def match_as_seen(self, mes_id):
+        cursor = self.connection.cursor()
+        cursor.execute("UPDATE messages SET seen = ? WHERE id = ?", (True, mes_id))
+        self.connection.commit()
+
+    def get_one(self, mes_id):
+        cursor = self.connection.cursor()
+        cursor.execute("SELECT * FROM messages WHERE id = ?", [mes_id])
+        sended = cursor.fetchone()
+        return sended
 
     def get_last(self, user_id, friend_id):
         gotten = self.get(user_id, friend_id)
@@ -248,6 +279,11 @@ message_model = MessageModel(db.get_connection())
 message_model.init_table()
 
 
+@app.route('/user/0')
+def index0():
+    return redirect('/user/{}'.format(session['username']))
+
+
 @app.route('/user/<username>')
 def index(username):
     global sort_method
@@ -256,6 +292,8 @@ def index(username):
             return redirect('/login')
         if username == 'favicon.ico':
             return
+        mess = message_model.check_mes_count(session['user_id'])
+        session['messages'] = mess
         host = user_model.get_by_name(username)
         if host:
             user_id = host[0]
@@ -310,7 +348,6 @@ def add_news():
         title = form.title.data
         content = form.content.data
         news_model.insert(title, content, session['user_id'])
-        print(session['username'], 'add_news')
     return render_template('add_news.html', title='Добавление новости',
                            form=form, username=session['username'], session=session)
 
@@ -319,6 +356,7 @@ def add_news():
 def login():
     session.pop('username', 0)
     session.pop('user_id', 0)
+    session.pop('mess', 0)
     form = LoginForm()
     if form.validate_on_submit():
         user_name = form.username.data
@@ -327,6 +365,8 @@ def login():
         if (exists[0]):
             session['username'] = user_name
             session['user_id'] = exists[1]
+            mess = message_model.check_mes_count(session['user_id'])
+            session['messages'] = mess
         return redirect('/user/{}'.format(user_name))
 
     return render_template('login.html', title='Авторизация', form=form)
@@ -344,6 +384,8 @@ def chat(friend_name):
                                friend_name=friend_name)
     elif request.method == 'GET':
         chat = get_chat(friend_id)
+        mess = message_model.check_mes_count(session['user_id'])
+        session['messages'] = mess
         return render_template('chat.html', title='Диалог', session=session, chat=chat,
                                friend_name=friend_name)
 
@@ -351,7 +393,7 @@ def chat(friend_name):
 def get_chat(friend_id):
     date = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', "Июль",
             "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"]
-    chat = message_model.get(session['user_id'], friend_id)
+    chat = message_model.get(session['user_id'], friend_id, check_old=True)
     chat = chat[0] + chat[1]
     chat.sort(key=lambda x: x[4])
     for i in range(len(chat)):
@@ -370,7 +412,11 @@ def get_chat(friend_id):
                 day = '{} {}'.format(t1[2], date[t1[1] - 1])
         else:
             day = '{} {}'.format(t1[2], date[t1[1] - 1])
-        chat[i][4] = day
+        if len(str(t1[4])) == 2:
+            t14 = t1[4]
+        else:
+            t14 = '0{}'.format(t1[4])
+        chat[i][4] = '{} {}:{}'.format(day, t1[3], t14)
     chat = chat[::-1]
     return chat
 
@@ -379,6 +425,7 @@ def get_chat(friend_id):
 def logout():
     session.pop('username', 0)
     session.pop('user_id', 0)
+    session.pop('messages', 0)
     return redirect('/login')
 
 
@@ -433,6 +480,7 @@ def log_index():
 def registration():
     session.pop('username', 0)
     session.pop('user_id', 0)
+    session.pop('messages', 0)
     form = LoginForm()
     if form.validate_on_submit():
         user_name = form.username.data
@@ -441,6 +489,7 @@ def registration():
         if (exists[0]):
             session['username'] = user_name
             session['user_id'] = exists[1]
+            session['messages'] = []
             return redirect('/user/{}'.format(user_name))
         form.alert = 'Такой логин уже занят'
     return render_template('login.html', title='Регистрация', form=form)

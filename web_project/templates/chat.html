@@ -23,13 +23,17 @@
             <div class="alert alert-primary" role="alert">
                 <h2>{{item[1]}}</h2>
                 <a>{{item[4]}}</a>
-                <div class="layer3">{{session['username']}}</div>
+                <div class="layer3">
+                    <a class="alert-link" href="/user/{{session['username']}}">{{session['username']}}</a>
+                </div>
             </div>
         {% else %}
             <div class="alert alert-dark" role="alert">
                 <h2>{{item[1]}}</h2>
                 <a>{{item[4]}}</a>
-                <div class="layer3">{{friend_name}}</div>
+                <div class="layer3">
+                    <a class="alert-link" href="/user/{{friend_name}}">{{friend_name}}</a>
+                </div>
             </div>
         {% endif %}
     {% endfor %}

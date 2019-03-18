@@ -2,7 +2,7 @@
 
 {% block content %}
     {% for item in friends %}
-        {% if friends[item][1] == session['username'] %}
+        {% if item in session['messages'] %}
             <div class="alert alert-primary" role="alert">
                 <a class="alert-link" href="/chat/{{item}}" ><h2>{{item}}</h2></a>
                 {% if friends[item] != ['', ''] %}
